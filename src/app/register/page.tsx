@@ -4,9 +4,10 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -14,22 +15,42 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+
+    if (password !== confirmPassword) {
+      setError('两次输入的密码不一致')
+      return
+    }
+
     setLoading(true)
 
     try {
-      const res = await fetch('/api/auth/login', {
+      // Register
+      const regRes = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       })
 
-      const data = await res.json()
+      const regData = await regRes.json()
 
-      if (res.ok) {
+      if (!regRes.ok) {
+        setError(regData.error || '注册失败')
+        return
+      }
+
+      // Auto-login after successful registration
+      const loginRes = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      })
+
+      if (loginRes.ok) {
         router.push('/')
         router.refresh()
       } else {
-        setError(data.error || '登录失败')
+        // Registration succeeded but auto-login failed
+        router.push('/login')
       }
     } catch {
       setError('请求失败，请重试')
@@ -43,9 +64,9 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="bg-card border rounded-lg p-6 shadow-sm">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-card-foreground">登录</h1>
+            <h1 className="text-2xl font-bold text-card-foreground">注册</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              登录你的 NoteMaster 账户
+              创建你的 NoteMaster 账户
             </p>
           </div>
 
@@ -78,9 +99,26 @@ export default function LoginPage() {
               <input
                 id="password"
                 type="password"
-                placeholder="输入密码"
+                placeholder="至少6个字符"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="confirmPassword"
+                className="text-sm font-medium text-foreground"
+              >
+                确认密码
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                placeholder="再次输入密码"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full px-3 py-2 border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -94,17 +132,17 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-md font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
             >
-              {loading ? '登录中...' : '登录'}
+              {loading ? '注册中...' : '注册'}
             </button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-4">
-            没有账户？{' '}
+            已有账户？{' '}
             <Link
-              href="/register"
+              href="/login"
               className="text-primary hover:underline font-medium"
             >
-              注册
+              登录
             </Link>
           </p>
         </div>

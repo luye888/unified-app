@@ -1,26 +1,29 @@
-import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 export async function POST(request: Request) {
-  const { password } = await request.json();
-  const sitePassword = process.env.SITE_PASSWORD;
+  const { username, password } = await request.json()
 
-  if (!sitePassword) {
-    return NextResponse.json({ error: '服务未配置密码' }, { status: 500 });
+  if (!username || !password) {
+    return NextResponse.json(
+      { error: '请填写用户名和密码' },
+      { status: 400 }
+    )
   }
 
-  if (password !== sitePassword) {
-    return NextResponse.json({ error: '密码错误' }, { status: 401 });
+  const supabase = await createServerSupabaseClient()
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: `${username}@app.local`,
+    password,
+  })
+
+  if (error) {
+    return NextResponse.json(
+      { error: '用户名或密码错误' },
+      { status: 401 }
+    )
   }
 
-  const cookieStore = await cookies();
-  cookieStore.set('auth_token', 'authenticated', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24, // 24 hours
-    path: '/',
-  });
-
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ user: data.user })
 }

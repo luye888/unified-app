@@ -9,6 +9,7 @@ const tabs = [
   { href: '/admin/projects', label: '项目管理' },
   { href: '/admin/users', label: '用户管理' },
   { href: '/admin/analytics', label: '访问统计' },
+  { href: '/admin/settings', label: '站点设置' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

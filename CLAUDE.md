@@ -7,35 +7,68 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run dev` — start dev server (Turbopack, default port 3000)
 - `npm run build` — production build (also runs TypeScript checks)
 - `npm run lint` — run ESLint
+- `npx tsx scripts/migrate-data.ts` — run data migration from my-site markdown files
 
 ## Architecture
 
-**NoteMaster** is a Chinese-language note processing app with automatic content organization and classification.
+**Unified Platform** — a personal website + note-taking app merged into a single Next.js application. Chinese-language, green/leaf theme.
 
 ### Stack
 - Next.js 16 (App Router, Turbopack) + React 19 + TypeScript
-- Supabase (PostgreSQL) for persistence — client in `src/lib/supabase.ts`
+- Supabase (PostgreSQL + Auth + Storage) for all backend services
 - Tiptap rich text editor (`src/components/NoteEditor.tsx`)
 - shadcn/ui components in `src/components/ui/`
 - Tailwind CSS v4
 
-### Key domain logic
+### Route Groups
 
-`src/lib/content-organizer.ts` is the core business logic. It performs structured analysis of raw text (including voice-to-text transcripts):
-- Filters oral filler words and timestamps via `cleanTranscript()`, `isUsefulSentence()`, `cleanOralFillers()`
-- Extracts keywords via `extractKeywords()` (with an extensive stopword list)
-- Identifies content type (技术教程, 会议记录, 学习笔记, etc.) via `analyzeContentType()`
-- Produces a 5-section structured output: content type judgment, core summary, structured breakdown, concise version, transferable applications
-- Auto-suggests categories via `analyzeCategory()`
+The app uses Next.js route groups to separate access levels:
 
-`generateStructuredNote()` is the main entry point — called from both `notes/new/page.tsx` and `notes/[id]/page.tsx` with debounced auto-organization (1.5s delay).
+- `(public)/` — no auth required: home, blog, projects, shared notes, blog archive
+- `(app)/` — requires login: my notes, create/edit notes, categories
+- `(admin)/` — requires admin role: dashboard, blog/project/user management, analytics, settings
+- `login/`, `register/` — auth pages
 
-### Data flow
+Middleware (`src/middleware.ts`) enforces auth via Supabase SSR cookies. Admin role check happens for `/admin/*` paths.
 
-Notes and categories CRUD go through `src/lib/notes.ts` and `src/lib/categories.ts` → Supabase client → `notes` and `categories` tables. RLS is disabled for development.
+### Authentication
 
-### Next.js specifics
+Supabase Auth with username + password. Users sign up with `username@app.local` virtual email format (Supabase requires email field). A database trigger auto-creates a `profiles` row on signup with role='user'. First user must be manually promoted to admin via SQL.
 
-- Params are async in Next.js 15+: use `const { id } = use(params)` (React `use()`) to unwrap `params: Promise<{ id: string }>`
-- Tiptap editor requires `immediatelyRender: false` to avoid SSR errors
-- All page components under `src/app/` are `'use client'` (client-side rendered)
+### Data Layer
+
+All CRUD modules in `src/lib/` use the Supabase browser client (`supabase` export from `./supabase.ts`):
+
+| Module | Table | Key functions |
+|---|---|---|
+| `notes.ts` | notes | getNotes (with search/filter/authorId/publicOnly), getNote, createNote, updateNote, deleteNote |
+| `blog.ts` | blog_posts | getBlogPosts, getBlogPost (by slug), getBlogPostById, createBlogPost, updateBlogPost, deleteBlogPost |
+| `projects.ts` | projects | getProjects, createProject, updateProject, deleteProject |
+| `categories.ts` | categories | getCategories, createCategory, updateCategory, deleteCategory |
+| `settings.ts` | site_settings | getSettings, updateSetting |
+| `auth.ts` | profiles | getCurrentUser, requireAuth, requireAdmin |
+
+Server components use `createServerSupabaseClient` from `./supabase-server.ts` (cookie-based).
+
+### Content Organizer
+
+`src/lib/content-organizer.ts` — pure text-processing pipeline (no external API). Entry point: `generateStructuredNote(title, content)` returns structured HTML, summary, tags, and content analysis. Used in note creation/editing with 1.5s debounce. Also: `analyzeCategory(text, categories)` for auto-categorization.
+
+### Theme System
+
+CSS variables in `globals.css` with `[data-theme="dark"]` / `[data-theme="light"]` on `<html>`. Theme persisted in localStorage. Key classes: `.glass-card` (glass morphism), `.gradient-text` (primary gradient).
+
+### Key Patterns
+
+- Notes have `is_private` (bool) and `author_id` fields for access control
+- Blog posts have `published` (bool) and `author_id` for multi-author support
+- Categories are per-user (`user_id` field)
+- Public notes are browsable at `/shared` (not `/notes`, which is the authenticated user's notes)
+- RLS policies enforce access at the database level
+- AnalyticsTracker component silently records page views on mount
+
+### Deployment
+
+Vercel auto-deploy. Required env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+
+Supabase setup: run `supabase/migrations/001-003` in SQL Editor, create `images` Storage bucket (public).

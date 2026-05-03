@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, use } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NoteEditor } from '@/components/NoteEditor';
-import { getNote, updateNote, deleteNote } from '@/lib/notes';
+import { createNote } from '@/lib/notes';
 import { getCategories, createCategory } from '@/lib/categories';
 import { generateStructuredNote, analyzeCategory } from '@/lib/content-organizer';
-import { Note, Category } from '@/types';
-import { ArrowLeft, Save, Trash2, Plus } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { Category } from '@/types';
+import { ArrowLeft, Save, Plus, Lock, Unlock } from 'lucide-react';
 import Link from 'next/link';
 import {
   Dialog,
@@ -26,18 +27,17 @@ const COLORS = [
   '#6366f1', '#8b5cf6', '#a855f7', '#ec4899',
 ];
 
-export default function NoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function NewNotePage() {
   const router = useRouter();
-  const [note, setNote] = useState<Note | null>(null);
+  const { user } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState(COLORS[0]);
   const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
   const [rawContent, setRawContent] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
   const [analysis, setAnalysis] = useState<{
     contentType: string;
     contentTypeReason: string;
@@ -59,30 +59,16 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    async function loadData() {
+    async function loadCategories() {
       try {
-        const [noteData, categoriesData] = await Promise.all([
-          getNote(id),
-          getCategories(),
-        ]);
-        setNote(noteData);
-        setCategories(categoriesData);
-        setRawContent(noteData.content);
-        setFormData({
-          title: noteData.title,
-          content: noteData.content,
-          summary: noteData.summary || '',
-          category_id: noteData.category_id || '',
-          tags: noteData.tags || [],
-        });
+        const data = await getCategories();
+        setCategories(user ? data.filter(c => c.user_id === user.id) : data);
       } catch (error) {
-        console.error('Failed to load note:', error);
-      } finally {
-        setLoading(false);
+        console.error('Failed to load categories:', error);
       }
     }
-    loadData();
-  }, [id]);
+    loadCategories();
+  }, [user]);
 
   const autoOrganize = useCallback((title: string, content: string) => {
     if (debounceTimer.current) {
@@ -113,6 +99,7 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
           createCategory({
             name: categoryResult.suggestedName,
             color: COLORS[Math.floor(Math.random() * COLORS.length)],
+            user_id: user?.id,
           }).then(newCat => {
             setCategories(prev => [...prev, newCat]);
             setFormData(prev => ({ ...prev, category_id: newCat.id }));
@@ -124,7 +111,7 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
         console.error('Auto-organize failed:', err);
       }
     }, 1500);
-  }, [categories]);
+  }, [categories, user]);
 
   const handleContentChange = useCallback((content: string) => {
     setRawContent(content);
@@ -144,6 +131,7 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
       const newCat = await createCategory({
         name: categoryName,
         color: newCategoryColor,
+        user_id: user?.id,
       });
       setCategories(prev => [...prev, newCat]);
       setFormData(prev => ({ ...prev, category_id: newCat.id }));
@@ -175,61 +163,31 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
   };
 
   const handleSave = async () => {
-    if (!formData.title.trim()) return;
+    if (!formData.title.trim() || !user) return;
 
     setSaving(true);
     try {
-      await updateNote(id, {
+      await createNote({
         title: formData.title,
         content: formData.content,
         summary: formData.summary || undefined,
         category_id: formData.category_id || undefined,
         tags: formData.tags,
+        is_private: isPrivate,
+        author_id: user.id,
       });
       router.push('/notes');
     } catch (error) {
-      console.error('Failed to update note:', error);
+      console.error('Failed to create note:', error);
       alert('保存失败，请检查控制台日志');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm('确定要删除这篇笔记吗？')) return;
-
-    try {
-      await deleteNote(id);
-      router.push('/notes');
-    } catch (error) {
-      console.error('Failed to delete note:', error);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="p-6 max-w-4xl mx-auto">
-        <div className="text-center py-8 text-muted-foreground">加载中...</div>
-      </div>
-    );
-  }
-
-  if (!note) {
-    return (
-      <div className="p-6 max-w-4xl mx-auto">
-        <div className="text-center py-8">
-          <p className="text-muted-foreground mb-4">笔记不存在</p>
-          <Link href="/notes">
-            <Button>返回笔记列表</Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <Link href="/notes">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -237,9 +195,17 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
           </Button>
         </Link>
         <div className="flex gap-2">
-          <Button variant="destructive" onClick={handleDelete}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            删除
+          <Button
+            variant={isPrivate ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setIsPrivate(!isPrivate)}
+          >
+            {isPrivate ? (
+              <Lock className="mr-2 h-4 w-4" />
+            ) : (
+              <Unlock className="mr-2 h-4 w-4" />
+            )}
+            {isPrivate ? '私密' : '公开'}
           </Button>
           <Button onClick={handleSave} disabled={!formData.title.trim() || saving}>
             <Save className="mr-2 h-4 w-4" />
@@ -276,7 +242,7 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
             <select
               value={formData.category_id}
               onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-              className="flex-1 border rounded-md px-3 py-2 bg-background"
+              className="flex-1 border rounded-md px-3 py-2 bg-[var(--leaf-surface)] border-[var(--leaf-border)]"
             >
               <option value="">选择分类...</option>
               {categories.map((category) => (
@@ -287,7 +253,7 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
             </select>
           </div>
           {suggestedCategory && (
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-[var(--leaf-text-muted)] mt-1">
               已自动识别分类: <span className="font-medium">{suggestedCategory}</span>
             </p>
           )}
@@ -299,7 +265,7 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
             value={formData.summary}
             onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
             placeholder="输入摘要，或等待自动生成..."
-            className="w-full border rounded-md px-3 py-2 bg-background min-h-[60px] resize-y"
+            className="w-full border rounded-md px-3 py-2 bg-[var(--leaf-surface)] border-[var(--leaf-border)] min-h-[60px] resize-y"
             rows={2}
           />
         </div>
@@ -310,14 +276,14 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
             {formData.tags.map((tag) => (
               <span
                 key={tag}
-                className="inline-flex items-center gap-1 px-2 py-1 bg-secondary rounded-md text-sm"
+                className="inline-flex items-center gap-1 px-2 py-1 bg-[var(--leaf-surface)] rounded-md text-sm"
               >
                 {tag}
                 <button
                   onClick={() => handleRemoveTag(tag)}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="text-[var(--leaf-text-muted)] hover:text-[var(--leaf-text)]"
                 >
-                  ×
+                  x
                 </button>
               </span>
             ))}
@@ -337,24 +303,23 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
             onChange={handleContentChange}
           />
 
-          {/* 结构化分析结果 */}
           {analysis && (
-            <div className="mt-6 p-6 bg-muted rounded-lg space-y-4">
-              <h3 className="text-lg font-semibold">结构化分析结果</h3>
+            <div className="mt-6 p-6 bg-[var(--leaf-surface)] rounded-lg space-y-4 border border-[var(--leaf-border)]">
+              <h3 className="text-lg font-semibold text-[var(--leaf-text)]">结构化分析结果</h3>
 
-              <div className="p-4 bg-background rounded-md">
-                <h4 className="font-medium mb-2">一、内容类型判断</h4>
+              <div className="p-4 bg-[var(--leaf-surface-glass)] rounded-md">
+                <h4 className="font-medium mb-2 text-[var(--leaf-text)]">一、内容类型判断</h4>
                 <p className="text-sm"><strong>类型：</strong>{analysis.contentType}</p>
-                <p className="text-sm text-muted-foreground"><strong>理由：</strong>{analysis.contentTypeReason}</p>
+                <p className="text-sm text-[var(--leaf-text-muted)]"><strong>理由：</strong>{analysis.contentTypeReason}</p>
               </div>
 
-              <div className="p-4 bg-background rounded-md">
-                <h4 className="font-medium mb-2">二、核心内容总结</h4>
+              <div className="p-4 bg-[var(--leaf-surface-glass)] rounded-md">
+                <h4 className="font-medium mb-2 text-[var(--leaf-text)]">二、核心内容总结</h4>
                 <p className="text-sm">{analysis.coreSummary}</p>
               </div>
 
-              <div className="p-4 bg-background rounded-md">
-                <h4 className="font-medium mb-2">三、结构化拆解</h4>
+              <div className="p-4 bg-[var(--leaf-surface-glass)] rounded-md">
+                <h4 className="font-medium mb-2 text-[var(--leaf-text)]">三、结构化拆解</h4>
                 <ul className="text-sm space-y-1">
                   <li><strong>主要观点：</strong>{analysis.mainTopics.join('；')}</li>
                   {analysis.supportingLogic.length > 0 && (
@@ -364,8 +329,8 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
                 </ul>
               </div>
 
-              <div className="p-4 bg-background rounded-md">
-                <h4 className="font-medium mb-2">四、精简版（适合快速复习）</h4>
+              <div className="p-4 bg-[var(--leaf-surface-glass)] rounded-md">
+                <h4 className="font-medium mb-2 text-[var(--leaf-text)]">四、精简版（适合快速复习）</h4>
                 <ol className="text-sm space-y-1 list-decimal list-inside">
                   {analysis.conciseVersion.map((point, i) => (
                     <li key={i}>{point}</li>
@@ -373,17 +338,16 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
                 </ol>
               </div>
 
-              <div className="p-4 bg-background rounded-md">
-                <h4 className="font-medium mb-2">五、可迁移应用</h4>
+              <div className="p-4 bg-[var(--leaf-surface-glass)] rounded-md">
+                <h4 className="font-medium mb-2 text-[var(--leaf-text)]">五、可迁移应用</h4>
                 <p className="text-sm">{analysis.transferableApplications}</p>
               </div>
             </div>
           )}
 
-          {/* 整理后内容预览 */}
           {formData.content && formData.content !== rawContent && (
-            <div className="mt-4 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
-              <p className="text-sm font-medium mb-2">整理后内容:</p>
+            <div className="mt-4 p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+              <p className="text-sm font-medium mb-2 text-[var(--leaf-text)]">整理后内容:</p>
               <div
                 className="text-sm prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{ __html: formData.content }}
@@ -393,7 +357,6 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
         </div>
       </div>
 
-      {/* 新建分类对话框 */}
       <Dialog open={showNewCategory} onOpenChange={setShowNewCategory}>
         <DialogContent>
           <DialogHeader>

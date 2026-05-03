@@ -22,7 +22,7 @@ export async function getCategory(id: string) {
   return data as Category;
 }
 
-type CategoryInput = Pick<Category, 'name'> & Partial<Pick<Category, 'description' | 'color'>>
+type CategoryInput = Pick<Category, 'name'> & Partial<Pick<Category, 'description' | 'color' | 'user_id'>>
 
 export async function createCategory(category: CategoryInput) {
   const { data, error } = await supabase

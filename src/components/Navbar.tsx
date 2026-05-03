@@ -8,7 +8,6 @@ const navLinks = [
   { href: '/', label: '首页' },
   { href: '/blog', label: '博客' },
   { href: '/projects', label: '项目' },
-  { href: '/notes', label: '笔记' },
 ]
 
 export function Navbar() {

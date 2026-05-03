@@ -28,6 +28,17 @@ export async function getBlogPost(slug: string) {
   return data as BlogPost
 }
 
+export async function getBlogPostById(id: string) {
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select('*, author:profiles(*)')
+    .eq('id', id)
+    .single()
+
+  if (error) throw error
+  return data as BlogPost
+}
+
 export async function createBlogPost(post: Partial<BlogPost>) {
   const { data, error } = await supabase
     .from('blog_posts')

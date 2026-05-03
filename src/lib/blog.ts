@@ -3,7 +3,7 @@ import { BlogPost } from '@/types'
 
 export async function getBlogPosts(options?: { published?: boolean }) {
   let query = supabase
-    .from('posts')
+    .from('blog_posts')
     .select('*, author:profiles(*)')
     .order('pinned', { ascending: false })
     .order('created_at', { ascending: false })
@@ -19,7 +19,7 @@ export async function getBlogPosts(options?: { published?: boolean }) {
 
 export async function getBlogPost(slug: string) {
   const { data, error } = await supabase
-    .from('posts')
+    .from('blog_posts')
     .select('*, author:profiles(*)')
     .eq('slug', slug)
     .single()
@@ -30,7 +30,7 @@ export async function getBlogPost(slug: string) {
 
 export async function createBlogPost(post: Partial<BlogPost>) {
   const { data, error } = await supabase
-    .from('posts')
+    .from('blog_posts')
     .insert(post)
     .select()
     .single()
@@ -41,7 +41,7 @@ export async function createBlogPost(post: Partial<BlogPost>) {
 
 export async function updateBlogPost(id: string, post: Partial<BlogPost>) {
   const { data, error } = await supabase
-    .from('posts')
+    .from('blog_posts')
     .update({ ...post, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
@@ -52,6 +52,6 @@ export async function updateBlogPost(id: string, post: Partial<BlogPost>) {
 }
 
 export async function deleteBlogPost(id: string) {
-  const { error } = await supabase.from('posts').delete().eq('id', id)
+  const { error } = await supabase.from('blog_posts').delete().eq('id', id)
   if (error) throw error
 }

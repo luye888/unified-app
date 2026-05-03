@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Category } from '@/types';
 
 interface CategoryTagProps {
-  category: Category;
+  category: Pick<Category, 'id' | 'name'> & Partial<Pick<Category, 'color'>>;
   isSelected?: boolean;
   onClick?: () => void;
 }

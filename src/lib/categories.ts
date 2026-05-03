@@ -22,7 +22,9 @@ export async function getCategory(id: string) {
   return data as Category;
 }
 
-export async function createCategory(category: Omit<Category, 'id' | 'created_at'>) {
+type CategoryInput = Pick<Category, 'name'> & Partial<Pick<Category, 'description' | 'color'>>
+
+export async function createCategory(category: CategoryInput) {
   const { data, error } = await supabase
     .from('categories')
     .insert(category)
@@ -33,7 +35,7 @@ export async function createCategory(category: Omit<Category, 'id' | 'created_at
   return data as Category;
 }
 
-export async function updateCategory(id: string, category: Partial<Omit<Category, 'id' | 'created_at'>>) {
+export async function updateCategory(id: string, category: Partial<Omit<Category, 'id' | 'created_at' | 'user_id'>>) {
   const { data, error } = await supabase
     .from('categories')
     .update(category)

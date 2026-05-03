@@ -22,7 +22,7 @@ export default function NotesPage() {
     async function loadData() {
       try {
         const [notesData, categoriesData] = await Promise.all([
-          getNotes(search, selectedCategory),
+          getNotes({ search: search || undefined, categoryId: selectedCategory }),
           getCategories(),
         ]);
         setNotes(notesData);
@@ -53,7 +53,7 @@ export default function NotesPage() {
 
         <div className="flex flex-wrap gap-2">
           <CategoryTag
-            category={{ id: '', name: '全部', created_at: '' }}
+            category={{ id: '', name: '全部' }}
             isSelected={!selectedCategory}
             onClick={() => setSelectedCategory(undefined)}
           />

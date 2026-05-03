@@ -9,6 +9,7 @@ import { NoteEditor } from '@/components/NoteEditor';
 import { createNote } from '@/lib/notes';
 import { getCategories, createCategory } from '@/lib/categories';
 import { generateStructuredNote, analyzeCategory } from '@/lib/content-organizer';
+import { useAuth } from '@/hooks/use-auth';
 import { Category } from '@/types';
 import { ArrowLeft, Save, Plus } from 'lucide-react';
 import Link from 'next/link';
@@ -28,6 +29,7 @@ const COLORS = [
 
 export default function NewNotePage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [saving, setSaving] = useState(false);
   const [showNewCategory, setShowNewCategory] = useState(false);
@@ -158,7 +160,7 @@ export default function NewNotePage() {
   };
 
   const handleSave = async () => {
-    if (!formData.title.trim()) return;
+    if (!formData.title.trim() || !user) return;
 
     setSaving(true);
     try {
@@ -168,6 +170,7 @@ export default function NewNotePage() {
         summary: formData.summary || undefined,
         category_id: formData.category_id || undefined,
         tags: formData.tags,
+        author_id: user.id,
       });
       router.push('/notes');
     } catch (error) {

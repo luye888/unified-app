@@ -128,3 +128,49 @@
     @apply font-sans;
   }
 }
+
+/* === 绿叶主题变量 === */
+:root {
+  --leaf-bg: #f5f9f5;
+  --leaf-surface: #ffffff;
+  --leaf-surface-glass: rgba(255, 255, 255, 0.7);
+  --leaf-text: #1a2e1a;
+  --leaf-text-muted: #5a7a5a;
+  --leaf-primary: #2d8a5e;
+  --leaf-primary-light: #4ecdc4;
+  --leaf-border: #d4e8d4;
+  --leaf-gradient: linear-gradient(135deg, #2d8a5e, #4ecdc4);
+  --leaf-shadow-glow: 0 0 20px rgba(45, 138, 94, 0.15);
+}
+
+[data-theme="dark"] {
+  --leaf-bg: #0a120e;
+  --leaf-surface: #1a2a1e;
+  --leaf-surface-glass: rgba(26, 42, 30, 0.8);
+  --leaf-text: #e0f0e0;
+  --leaf-text-muted: #8aaa8a;
+  --leaf-primary: #5eba8a;
+  --leaf-primary-light: #6ee7c0;
+  --leaf-border: #2a4a2a;
+  --leaf-gradient: linear-gradient(135deg, #5eba8a, #6ee7c0);
+  --leaf-shadow-glow: 0 0 20px rgba(94, 186, 138, 0.2);
+}
+
+.glass-card {
+  background: var(--leaf-surface-glass);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--leaf-border);
+  border-radius: 12px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.glass-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--leaf-shadow-glow);
+}
+
+.gradient-text {
+  background: var(--leaf-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

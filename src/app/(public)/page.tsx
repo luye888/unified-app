@@ -84,7 +84,7 @@ export default async function HomePage() {
             <Link href="/projects" className="text-sm text-muted-foreground hover:text-foreground">
               全部项目 &rarr;
             </Link>
-            <Link href="/shared" className="text-sm text-muted-foreground hover:text-foreground">
+            <Link href="/projects" className="text-sm text-muted-foreground hover:text-foreground">
               全部笔记 &rarr;
             </Link>
           </div>

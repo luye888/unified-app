@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>绿叶 · 本地数据面板</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg: #0a0f0a;
+  --surface: #111a11;
+  --surface2: #162016;
+  --border: #1e3a1e;
+  --primary: #5eba8a;
+  --primary2: #6ee7c0;
+  --text: #e0f0e0;
+  --text2: #7a9a7a;
+  --danger: #ef4444;
+  --warn: #f59e0b;
+  --radius: 10px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+a { color: var(--primary2); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Layout */
+.app { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 220px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 20px 0;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+.sidebar h1 {
+  font-size: 1.2rem;
+  padding: 0 20px 20px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--primary), var(--primary2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.sidebar nav { padding: 12px 0; }
+.sidebar nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  color: var(--text2);
+  transition: all .2s;
+  font-size: .9rem;
+  cursor: pointer;
+}
+.sidebar nav a:hover, .sidebar nav a.active {
+  color: var(--primary2);
+  background: var(--surface2);
+  text-decoration: none;
+}
+.sidebar nav a.active { border-right: 3px solid var(--primary); }
+.main { flex: 1; padding: 24px 32px; overflow-x: auto; }
+.main h2 {
+  font-size: 1.4rem;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Stats */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 28px; }
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: center;
+}
+.stat-card .num {
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary), var(--primary2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.stat-card .label { color: var(--text2); font-size: .85rem; margin-top: 4px; }
+
+/* Table */
+.table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.toolbar input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: .85rem;
+  width: 240px;
+}
+.toolbar input:focus { outline: none; border-color: var(--primary); }
+table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+th { background: var(--surface2); color: var(--text2); font-weight: 600; position: sticky; top: 0; }
+tr:hover { background: var(--surface2); }
+td.max { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.empty { padding: 40px; text-align: center; color: var(--text2); }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: .8rem;
+  cursor: pointer;
+  transition: all .2s;
+}
+.btn:hover { border-color: var(--primary); color: var(--primary2); }
+.btn-primary { background: var(--primary); color: #000; border-color: var(--primary); font-weight: 600; }
+.btn-primary:hover { background: var(--primary2); }
+.btn-danger { border-color: var(--danger); color: var(--danger); }
+.btn-danger:hover { background: var(--danger); color: #fff; }
+.btn-sm { padding: 4px 10px; font-size: .75rem; }
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: .75rem;
+  font-weight: 500;
+}
+.badge-green { background: #5eba8a22; color: #5eba8a; }
+.badge-red { background: #ef444422; color: #ef4444; }
+.badge-yellow { background: #f59e0b22; color: #f59e0b; }
+.badge-blue { background: #3b82f622; color: #3b82f6; }
+.badge-gray { background: #64748b22; color: #94a3b8; }
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 560px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+}
+.modal h3 { font-size: 1.1rem; margin-bottom: 16px; }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 4px; }
+.form-group input, .form-group textarea, .form-group select {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: .85rem;
+  font-family: inherit;
+}
+.form-group textarea { min-height: 120px; resize: vertical; }
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
+.form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--surface);
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: .85rem;
+  z-index: 200;
+  animation: fadeIn .3s;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* Loading */
+.spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Quick links */
+.quick-links { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+.quick-links a {
+  padding: 8px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: .85rem;
+  transition: all .2s;
+}
+.quick-links a:hover { border-color: var(--primary); color: var(--primary2); }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <h1>绿叶数据面板</h1>
+    <nav>
+      <a onclick="showPage('overview')" class="active" id="nav-overview">概览</a>
+      <a onclick="showPage('notes')" id="nav-notes">笔记管理</a>
+      <a onclick="showPage('blog')" id="nav-blog">博客管理</a>
+      <a onclick="showPage('projects')" id="nav-projects">项目管理</a>
+      <a onclick="showPage('categories')" id="nav-categories">分类管理</a>
+      <a onclick="showPage('profiles')" id="nav-profiles">用户管理</a>
+    </nav>
+    <div style="padding:20px;border-top:1px solid var(--border);margin-top:auto;">
+      <div style="font-size:.75rem;color:var(--text2);">
+        <div>连接状态: <span id="conn-status" class="badge badge-yellow">检测中</span></div>
+        <div style="margin-top:6px;">数据表: 7</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main" id="content">
+    <div style="text-align:center;padding:60px;"><div class="spinner"></div><p style="margin-top:12px;color:var(--text2);">加载中...</p></div>
+  </main>
+</div>
+
+<!-- Note Modal -->
+<div class="modal-overlay" id="note-modal">
+  <div class="modal">
+    <h3 id="note-modal-title">新建笔记</h3>
+    <input type="hidden" id="note-edit-id">
+    <div class="form-group"><label>标题</label><input id="note-title" placeholder="笔记标题"></div>
+    <div class="form-group"><label>摘要</label><input id="note-summary" placeholder="简短摘要"></div>
+    <div class="form-group"><label>分类</label><select id="note-category"><option value="">无分类</option></select></div>
+    <div class="form-group"><label>标签（逗号分隔）</label><input id="note-tags" placeholder="tag1, tag2"></div>
+    <div class="form-group">
+      <label>可见性</label>
+      <select id="note-private"><option value="false">公开</option><option value="true">私密</option></select>
+    </div>
+    <div class="form-group"><label>内容</label><textarea id="note-content" placeholder="笔记内容..."></textarea></div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal('note-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveNote()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Blog Modal -->
+<div class="modal-overlay" id="blog-modal">
+  <div class="modal">
+    <h3 id="blog-modal-title">新建博客</h3>
+    <input type="hidden" id="blog-edit-id">
+    <div class="form-group"><label>标题</label><input id="blog-title" placeholder="文章标题"></div>
+    <div class="form-group"><label>Slug</label><input id="blog-slug" placeholder="url-friendly-slug"></div>
+    <div class="form-group"><label>描述</label><textarea id="blog-desc" style="min-height:60px" placeholder="文章简介"></textarea></div>
+    <div class="form-group"><label>标签（逗号分隔）</label><input id="blog-tags" placeholder="tag1, tag2"></div>
+    <div class="form-group">
+      <label>状态</label>
+      <select id="blog-published"><option value="false">草稿</option><option value="true">已发布</option></select>
+    </div>
+    <div class="form-group"><label>内容</label><textarea id="blog-content" placeholder="文章内容 (Markdown)..."></textarea></div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal('blog-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveBlog()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Project Modal -->
+<div class="modal-overlay" id="project-modal">
+  <div class="modal">
+    <h3 id="project-modal-title">新建项目</h3>
+    <input type="hidden" id="project-edit-id">
+    <div class="form-group"><label>标题</label><input id="project-title" placeholder="项目名称"></div>
+    <div class="form-group"><label>描述</label><textarea id="project-desc" style="min-height:60px" placeholder="项目简介"></textarea></div>
+    <div class="form-group"><label>技术栈（逗号分隔）</label><input id="project-tech" placeholder="Next.js, Supabase, Tailwind"></div>
+    <div class="form-group"><label>在线链接</label><input id="project-url" placeholder="https://..."></div>
+    <div class="form-group"><label>GitHub</label><input id="project-github" placeholder="https://github.com/..."></div>
+    <div class="form-group"><label>排序权重</label><input id="project-order" type="number" value="0"></div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal('project-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveProject()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Category Modal -->
+<div class="modal-overlay" id="cat-modal">
+  <div class="modal">
+    <h3 id="cat-modal-title">新建分类</h3>
+    <input type="hidden" id="cat-edit-id">
+    <div class="form-group"><label>名称</label><input id="cat-name" placeholder="分类名称"></div>
+    <div class="form-group"><label>颜色</label><input id="cat-color" type="color" value="#5eba8a"></div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal('cat-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveCategory()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Supabase Config ───
+const SUPABASE_URL = 'https://hsymysunfrpzdvnobszl.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_IvsRlvu1pkrYQGNRiu4lCA_0AjnWD3S';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let categoriesCache = [];
+
+// ─── Auth ───
+async function checkAuth() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
+    currentUser = profile;
+    document.getElementById('conn-status').textContent = '已连接';
+    document.getElementById('conn-status').className = 'badge badge-green';
+  } else {
+    document.getElementById('conn-status').textContent = '未登录';
+    document.getElementById('conn-status').className = 'badge badge-red';
+  }
+}
+
+// ─── Page Router ───
+function showPage(page) {
+  document.querySelectorAll('.sidebar nav a').forEach(a => a.classList.remove('active'));
+  document.getElementById('nav-' + page)?.classList.add('active');
+  const loaders = { overview: loadOverview, notes: loadNotes, blog: loadBlog, projects: loadProjects, categories: loadCategories, profiles: loadProfiles };
+  loaders[page]?.();
+}
+
+// ─── Overview ───
+async function loadOverview() {
+  const c = document.getElementById('content');
+  c.innerHTML = '<h2>概览</h2><div class="stats" id="stats-grid"><div class="stat-card"><div class="num">...</div></div></div>';
+
+  const [notes, blog, projects, cats, profiles] = await Promise.all([
+    sb.from('notes').select('id', { count: 'exact', head: true }),
+    sb.from('blog_posts').select('id', { count: 'exact', head: true }),
+    sb.from('projects').select('id', { count: 'exact', head: true }),
+    sb.from('categories').select('id', { count: 'exact', head: true }),
+    sb.from('profiles').select('id', { count: 'exact', head: true }),
+  ]);
+
+  c.innerHTML = `
+    <h2>概览</h2>
+    <div class="stats">
+      <div class="stat-card"><div class="num">${notes.count ?? 0}</div><div class="label">笔记</div></div>
+      <div class="stat-card"><div class="num">${blog.count ?? 0}</div><div class="label">博客文章</div></div>
+      <div class="stat-card"><div class="num">${projects.count ?? 0}</div><div class="label">项目</div></div>
+      <div class="stat-card"><div class="num">${cats.count ?? 0}</div><div class="label">分类</div></div>
+      <div class="stat-card"><div class="num">${profiles.count ?? 0}</div><div class="label">用户</div></div>
+    </div>
+    <div class="quick-links">
+      <a href="/" target="_blank">首页</a>
+      <a href="/blog" target="_blank">博客</a>
+      <a href="/projects" target="_blank">项目</a>
+      <a href="/notes" target="_blank">我的笔记</a>
+      <a href="/notes/new" target="_blank">新建笔记</a>
+    </div>
+    <div style="margin-top:20px;">
+      <h3 style="font-size:1rem;margin-bottom:12px;">快速操作</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="showPage('notes');setTimeout(()=>openNoteModal(),100)">新建笔记</button>
+        <button class="btn" onclick="showPage('blog');setTimeout(()=>openBlogModal(),100)">新建博客</button>
+        <button class="btn" onclick="showPage('projects');setTimeout(()=>openProjectModal(),100)">新建项目</button>
+      </div>
+    </div>
+  `;
+}
+
+// ─── Notes ───
+async function loadNotes() {
+  const c = document.getElementById('content');
+  c.innerHTML = '<h2>笔记管理</h2><div style="text-align:center;padding:40px;"><div class="spinner"></div></div>';
+
+  const [notesRes, catsRes] = await Promise.all([
+    sb.from('notes').select('*, category:categories(name,color), author:profiles(display_name,username)').order('updated_at', { ascending: false }),
+    sb.from('categories').select('*'),
+  ]);
+  categoriesCache = catsRes.data || [];
+  const notes = notesRes.data || [];
+
+  c.innerHTML = `
+    <h2>笔记管理 <span style="font-size:.8rem;color:var(--text2);">(${notes.length})</span></h2>
+    <div class="table-wrap">
+      <div class="toolbar">
+        <input id="note-search" placeholder="搜索笔记..." oninput="filterTable('notes-table', this.value)">
+        <button class="btn btn-primary" onclick="openNoteModal()">新建笔记</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="notes-table">
+          <thead><tr><th>标题</th><th>分类</th><th>可见性</th><th>作者</th><th>更新时间</th><th>操作</th></tr></thead>
+          <tbody>
+            ${notes.length === 0 ? '<tr><td colspan="6" class="empty">暂无笔记</td></tr>' :
+              notes.map(n => `<tr data-id="${n.id}">
+                <td class="max"><a href="/shared/${n.id}" target="_blank">${esc(n.title)}</a></td>
+                <td>${n.category ? `<span class="badge" style="background:${n.category.color}22;color:${n.category.color}">${esc(n.category.name)}</span>` : '<span style="color:var(--text2)">—</span>'}</td>
+                <td>${n.is_private ? '<span class="badge badge-red">私密</span>' : '<span class="badge badge-green">公开</span>'}</td>
+                <td style="font-size:.8rem;color:var(--text2)">${esc(n.author?.display_name || n.author?.username || '—')}</td>
+                <td style="font-size:.8rem;color:var(--text2)">${fmtDate(n.updated_at)}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="editNote('${n.id}')">编辑</button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteItem('notes','${n.id}',loadNotes)">删除</button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function openNoteModal(note) {
+  document.getElementById('note-edit-id').value = note?.id || '';
+  document.getElementById('note-modal-title').textContent = note ? '编辑笔记' : '新建笔记';
+  document.getElementById('note-title').value = note?.title || '';
+  document.getElementById('note-summary').value = note?.summary || '';
+  document.getElementById('note-tags').value = (note?.tags || []).join(', ');
+  document.getElementById('note-private').value = note?.is_private ? 'true' : 'false';
+  document.getElementById('note-content').value = note?.content || '';
+
+  const sel = document.getElementById('note-category');
+  sel.innerHTML = '<option value="">无分类</option>' +
+    categoriesCache.map(c => `<option value="${c.id}" ${note?.category_id === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+
+  document.getElementById('note-modal').classList.add('show');
+}
+
+async function editNote(id) {
+  const { data } = await sb.from('notes').select('*').eq('id', id).single();
+  if (data) openNoteModal(data);
+}
+
+async function saveNote() {
+  const id = document.getElementById('note-edit-id').value;
+  const payload = {
+    title: document.getElementById('note-title').value.trim(),
+    summary: document.getElementById('note-summary').value.trim() || null,
+    category_id: document.getElementById('note-category').value || null,
+    tags: document.getElementById('note-tags').value.split(',').map(s => s.trim()).filter(Boolean),
+    is_private: document.getElementById('note-private').value === 'true',
+    content: document.getElementById('note-content').value,
+  };
+  if (!payload.title) return toast('请输入标题', 'warn');
+
+  if (id) {
+    const { error } = await sb.from('notes').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', id);
+    if (error) return toast('保存失败: ' + error.message, 'error');
+    toast('笔记已更新');
+  } else {
+    if (!currentUser) return toast('未登录', 'error');
+    const { error } = await sb.from('notes').insert({ ...payload, author_id: currentUser.id });
+    if (error) return toast('创建失败: ' + error.message, 'error');
+    toast('笔记已创建');
+  }
+  closeModal('note-modal');
+  loadNotes();
+}
+
+// ─── Blog ───
+async function loadBlog() {
+  const c = document.getElementById('content');
+  c.innerHTML = '<h2>博客管理</h2><div style="text-align:center;padding:40px;"><div class="spinner"></div></div>';
+
+  const { data: posts } = await sb.from('blog_posts').select('*, author:profiles(display_name,username)').order('created_at', { ascending: false });
+
+  c.innerHTML = `
+    <h2>博客管理 <span style="font-size:.8rem;color:var(--text2);">(${(posts||[]).length})</span></h2>
+    <div class="table-wrap">
+      <div class="toolbar">
+        <input placeholder="搜索博客..." oninput="filterTable('blog-table', this.value)">
+        <button class="btn btn-primary" onclick="openBlogModal()">新建博客</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="blog-table">
+          <thead><tr><th>标题</th><th>Slug</th><th>状态</th><th>置顶</th><th>阅读时长</th><th>发布时间</th><th>操作</th></tr></thead>
+          <tbody>
+            ${(posts||[]).length === 0 ? '<tr><td colspan="7" class="empty">暂无博客</td></tr>' :
+              (posts||[]).map(p => `<tr>
+                <td class="max"><a href="/blog/${p.slug}" target="_blank">${esc(p.title)}</a></td>
+                <td style="font-size:.8rem;color:var(--text2)">${esc(p.slug)}</td>
+                <td>${p.published ? '<span class="badge badge-green">已发布</span>' : '<span class="badge badge-gray">草稿</span>'}</td>
+                <td>${p.pinned ? '📌' : ''}</td>
+                <td style="font-size:.8rem">${p.read_time || 0} 分钟</td>
+                <td style="font-size:.8rem;color:var(--text2)">${fmtDate(p.created_at)}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="editBlog('${p.id}')">编辑</button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteItem('blog_posts','${p.id}',loadBlog)">删除</button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function openBlogModal(post) {
+  document.getElementById('blog-edit-id').value = post?.id || '';
+  document.getElementById('blog-modal-title').textContent = post ? '编辑博客' : '新建博客';
+  document.getElementById('blog-title').value = post?.title || '';
+  document.getElementById('blog-slug').value = post?.slug || '';
+  document.getElementById('blog-desc').value = post?.description || '';
+  document.getElementById('blog-tags').value = (post?.tags || []).join(', ');
+  document.getElementById('blog-published').value = post?.published ? 'true' : 'false';
+  document.getElementById('blog-content').value = post?.content || '';
+  document.getElementById('blog-modal').classList.add('show');
+}
+
+async function editBlog(id) {
+  const { data } = await sb.from('blog_posts').select('*').eq('id', id).single();
+  if (data) openBlogModal(data);
+}
+
+async function saveBlog() {
+  const id = document.getElementById('blog-edit-id').value;
+  const title = document.getElementById('blog-title').value.trim();
+  const slug = document.getElementById('blog-slug').value.trim() || title.toLowerCase().replace(/[^a-z0-9一-鿿]+/g, '-').replace(/(^-|-$)/g, '');
+  const payload = {
+    title,
+    slug,
+    description: document.getElementById('blog-desc').value.trim(),
+    tags: document.getElementById('blog-tags').value.split(',').map(s => s.trim()).filter(Boolean),
+    published: document.getElementById('blog-published').value === 'true',
+    content: document.getElementById('blog-content').value,
+    read_time: Math.max(1, Math.ceil(document.getElementById('blog-content').value.length / 500)),
+  };
+  if (!payload.title) return toast('请输入标题', 'warn');
+
+  if (id) {
+    const { error } = await sb.from('blog_posts').update(payload).eq('id', id);
+    if (error) return toast('保存失败: ' + error.message, 'error');
+    toast('博客已更新');
+  } else {
+    if (!currentUser) return toast('未登录', 'error');
+    const { error } = await sb.from('blog_posts').insert({ ...payload, author_id: currentUser.id });
+    if (error) return toast('创建失败: ' + error.message, 'error');
+    toast('博客已创建');
+  }
+  closeModal('blog-modal');
+  loadBlog();
+}
+
+// ─── Projects ───
+async function loadProjects() {
+  const c = document.getElementById('content');
+  c.innerHTML = '<h2>项目管理</h2><div style="text-align:center;padding:40px;"><div class="spinner"></div></div>';
+
+  const { data: projects } = await sb.from('projects').select('*').order('order', { ascending: false });
+
+  c.innerHTML = `
+    <h2>项目管理 <span style="font-size:.8rem;color:var(--text2);">(${(projects||[]).length})</span></h2>
+    <div class="table-wrap">
+      <div class="toolbar">
+        <input placeholder="搜索项目..." oninput="filterTable('projects-table', this.value)">
+        <button class="btn btn-primary" onclick="openProjectModal()">新建项目</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="projects-table">
+          <thead><tr><th>标题</th><th>描述</th><th>技术栈</th><th>链接</th><th>排序</th><th>操作</th></tr></thead>
+          <tbody>
+            ${(projects||[]).length === 0 ? '<tr><td colspan="6" class="empty">暂无项目</td></tr>' :
+              (projects||[]).map(p => `<tr>
+                <td><strong>${esc(p.title)}</strong></td>
+                <td class="max">${esc(p.description || '')}</td>
+                <td>${(p.tech||[]).map(t => `<span class="badge badge-blue">${esc(t)}</span>`).join(' ')}</td>
+                <td style="font-size:.8rem">
+                  ${p.url ? `<a href="${p.url}" target="_blank">预览</a> ` : ''}
+                  ${p.github ? `<a href="${p.github}" target="_blank">GitHub</a>` : ''}
+                </td>
+                <td style="font-size:.8rem">${p.order || 0}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="editProject('${p.id}')">编辑</button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteItem('projects','${p.id}',loadProjects)">删除</button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function openProjectModal(proj) {
+  document.getElementById('project-edit-id').value = proj?.id || '';
+  document.getElementById('project-modal-title').textContent = proj ? '编辑项目' : '新建项目';
+  document.getElementById('project-title').value = proj?.title || '';
+  document.getElementById('project-desc').value = proj?.description || '';
+  document.getElementById('project-tech').value = (proj?.tech || []).join(', ');
+  document.getElementById('project-url').value = proj?.url || '';
+  document.getElementById('project-github').value = proj?.github || '';
+  document.getElementById('project-order').value = proj?.order || 0;
+  document.getElementById('project-modal').classList.add('show');
+}
+
+async function editProject(id) {
+  const { data } = await sb.from('projects').select('*').eq('id', id).single();
+  if (data) openProjectModal(data);
+}
+
+async function saveProject() {
+  const id = document.getElementById('project-edit-id').value;
+  const payload = {
+    title: document.getElementById('project-title').value.trim(),
+    description: document.getElementById('project-desc').value.trim(),
+    tech: document.getElementById('project-tech').value.split(',').map(s => s.trim()).filter(Boolean),
+    url: document.getElementById('project-url').value.trim() || null,
+    github: document.getElementById('project-github').value.trim() || null,
+    order: parseInt(document.getElementById('project-order').value) || 0,
+  };
+  if (!payload.title) return toast('请输入标题', 'warn');
+
+  if (id) {
+    const { error } = await sb.from('projects').update(payload).eq('id', id);
+    if (error) return toast('保存失败: ' + error.message, 'error');
+    toast('项目已更新');
+  } else {
+    const { error } = await sb.from('projects').insert(payload);
+    if (error) return toast('创建失败: ' + error.message, 'error');
+    toast('项目已创建');
+  }
+  closeModal('project-modal');
+  loadProjects();
+}
+
+// ─── Categories ───
+async function loadCategories() {
+  const c = document.getElementById('content');
+  c.innerHTML = '<h2>分类管理</h2><div style="text-align:center;padding:40px;"><div class="spinner"></div></div>';
+
+  const { data: cats } = await sb.from('categories').select('*, owner:profiles(display_name,username)').order('created_at', { ascending: false });
+
+  c.innerHTML = `
+    <h2>分类管理 <span style="font-size:.8rem;color:var(--text2);">(${(cats||[]).length})</span></h2>
+    <div class="table-wrap">
+      <div class="toolbar">
+        <input placeholder="搜索分类..." oninput="filterTable('cats-table', this.value)">
+        <button class="btn btn-primary" onclick="openCatModal()">新建分类</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="cats-table">
+          <thead><tr><th>颜色</th><th>名称</th><th>所有者</th><th>创建时间</th><th>操作</th></tr></thead>
+          <tbody>
+            ${(cats||[]).length === 0 ? '<tr><td colspan="5" class="empty">暂无分类</td></tr>' :
+              (cats||[]).map(c => `<tr>
+                <td><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${c.color || '#5eba8a'}"></span></td>
+                <td><strong>${esc(c.name)}</strong></td>
+                <td style="font-size:.8rem;color:var(--text2)">${esc(c.owner?.display_name || c.owner?.username || '—')}</td>
+                <td style="font-size:.8rem;color:var(--text2)">${fmtDate(c.created_at)}</td>
+                <td>
+                  <button class="btn btn-sm" onclick="editCat('${c.id}')">编辑</button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteItem('categories','${c.id}',loadCategories)">删除</button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function openCatModal(cat) {
+  document.getElementById('cat-edit-id').value = cat?.id || '';
+  document.getElementById('cat-modal-title').textContent = cat ? '编辑分类' : '新建分类';
+  document.getElementById('cat-name').value = cat?.name || '';
+  document.getElementById('cat-color').value = cat?.color || '#5eba8a';
+  document.getElementById('cat-modal').classList.add('show');
+}
+
+async function editCat(id) {
+  const { data } = await sb.from('categories').select('*').eq('id', id).single();
+  if (data) openCatModal(data);
+}
+
+async function saveCategory() {
+  const id = document.getElementById('cat-edit-id').value;
+  const payload = {
+    name: document.getElementById('cat-name').value.trim(),
+    color: document.getElementById('cat-color').value,
+  };
+  if (!payload.name) return toast('请输入名称', 'warn');
+
+  if (id) {
+    const { error } = await sb.from('categories').update(payload).eq('id', id);
+    if (error) return toast('保存失败: ' + error.message, 'error');
+    toast('分类已更新');
+  } else {
+    if (!currentUser) return toast('未登录', 'error');
+    const { error } = await sb.from('categories').insert({ ...payload, user_id: currentUser.id });
+    if (error) return toast('创建失败: ' + error.message, 'error');
+    toast('分类已创建');
+  }
+  closeModal('cat-modal');
+  loadCategories();
+}
+
+// ─── Profiles ───
+async function loadProfiles() {
+  const c = document.getElementById('content');
+  c.innerHTML = '<h2>用户管理</h2><div style="text-align:center;padding:40px;"><div class="spinner"></div></div>';
+
+  const { data: profiles } = await sb.from('profiles').select('*').order('created_at', { ascending: false });
+
+  c.innerHTML = `
+    <h2>用户管理 <span style="font-size:.8rem;color:var(--text2);">(${(profiles||[]).length})</span></h2>
+    <div class="table-wrap">
+      <div class="toolbar">
+        <input placeholder="搜索用户..." oninput="filterTable('profiles-table', this.value)">
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="profiles-table">
+          <thead><tr><th>用户名</th><th>显示名</th><th>角色</th><th>简介</th><th>注册时间</th></tr></thead>
+          <tbody>
+            ${(profiles||[]).length === 0 ? '<tr><td colspan="5" class="empty">暂无用户</td></tr>' :
+              (profiles||[]).map(p => `<tr>
+                <td><strong>${esc(p.username)}</strong></td>
+                <td>${esc(p.display_name || '—')}</td>
+                <td>${p.role === 'admin' ? '<span class="badge badge-yellow">管理员</span>' : '<span class="badge badge-gray">用户</span>'}</td>
+                <td class="max">${esc(p.bio || '—')}</td>
+                <td style="font-size:.8rem;color:var(--text2)">${fmtDate(p.created_at)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ─── Utils ───
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function fmtDate(s) { if (!s) return '—'; return new Date(s).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }); }
+
+function filterTable(tableId, q) {
+  q = q.toLowerCase();
+  document.querySelectorAll(`#${tableId} tbody tr`).forEach(tr => {
+    tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+async function deleteItem(table, id, reload) {
+  if (!confirm('确定要删除吗？此操作不可撤销。')) return;
+  const { error } = await sb.from(table).delete().eq('id', id);
+  if (error) return toast('删除失败: ' + error.message, 'error');
+  toast('已删除');
+  reload();
+}
+
+function toast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.style.borderColor = type === 'error' ? 'var(--danger)' : type === 'warn' ? 'var(--warn)' : 'var(--primary)';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('show'); });
+});
+
+// ─── Init ───
+checkAuth().then(() => loadOverview());
+</script>
+</body>
+</html>

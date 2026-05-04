@@ -12,9 +12,10 @@ export function useAuth() {
     const supabase = createClient()
 
     async function fetchUser() {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
+      // getSession() reads JWT from cookies — no network call
+      const { data: { session } } = await supabase.auth.getSession()
 
-      if (!authUser) {
+      if (!session?.user) {
         setUser(null)
         setLoading(false)
         return
@@ -23,7 +24,7 @@ export function useAuth() {
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', authUser.id)
+        .eq('id', session.user.id)
         .single()
 
       setUser(profile as UserProfile | null)

@@ -20,7 +20,6 @@ function isPublicPath(pathname: string): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Build a response that we can attach cookies to
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -44,10 +43,10 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refresh session
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Use getSession() instead of getUser() — reads JWT from cookies locally,
+  // no network call to Supabase. Faster for middleware.
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user ?? null
 
   // If logged in and visiting login/register, redirect to /
   if (user && (pathname === '/login' || pathname === '/register')) {

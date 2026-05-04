@@ -11,14 +11,15 @@ export interface UserProfile {
 
 export async function getCurrentUser(): Promise<UserProfile | null> {
   const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // getSession() reads JWT from cookies — no network call
+  const { data: { session } } = await supabase.auth.getSession()
 
-  if (!user) return null
+  if (!session?.user) return null
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', user.id)
+    .eq('id', session.user.id)
     .single()
 
   if (!profile) return null

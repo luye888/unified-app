@@ -13,19 +13,18 @@ export default function AdminBlogPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    async function loadPosts() {
+      try {
+        const data = await getBlogPosts();
+        setPosts(data);
+      } catch (error) {
+        console.error('Failed to load posts:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
     loadPosts();
   }, []);
-
-  async function loadPosts() {
-    try {
-      const data = await getBlogPosts();
-      setPosts(data);
-    } catch (error) {
-      console.error('Failed to load posts:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleDelete(id: string) {
     if (!confirm('确定要删除这篇文章吗？')) return;

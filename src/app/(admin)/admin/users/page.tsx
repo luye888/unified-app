@@ -12,25 +12,24 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    async function loadProfiles() {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setProfiles(data as Profile[]);
+      } catch (error) {
+        console.error('Failed to load profiles:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
     loadProfiles();
   }, []);
-
-  async function loadProfiles() {
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setProfiles(data as Profile[]);
-    } catch (error) {
-      console.error('Failed to load profiles:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function toggleRole(profile: Profile) {
     const newRole = profile.role === 'admin' ? 'user' : 'admin';

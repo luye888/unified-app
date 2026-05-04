@@ -6,7 +6,8 @@ export default async function AnalyticsPage() {
   const supabase = await createServerSupabaseClient();
 
   // Fetch page views from last 7 days
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const { data: pageViews } = await supabase
     .from('page_views')

@@ -5,10 +5,11 @@ const PUBLIC_PATHS = [
   '/',
   '/blog',
   '/projects',
-  '/notes',
+  '/shared',
   '/login',
   '/register',
   '/api/auth',
+  '/api/setup-root', // ⚠️ 临时：创建完 root 用户后删除
 ]
 
 function isPublicPath(pathname: string): boolean {
@@ -43,10 +44,15 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Use getSession() instead of getUser() — reads JWT from cookies locally,
-  // no network call to Supabase. Faster for middleware.
-  const { data: { session } } = await supabase.auth.getSession()
-  const user = session?.user ?? null
+  // getUser() validates the JWT with Supabase server — secure against cookie tampering
+  let user = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch {
+    // getUser() failed (network error, timeout, etc.) — treat as unauthenticated
+    user = null
+  }
 
   // If logged in and visiting login/register, redirect to /
   if (user && (pathname === '/login' || pathname === '/register')) {

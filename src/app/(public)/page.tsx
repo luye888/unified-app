@@ -92,7 +92,7 @@ export default async function HomePage({
   // Regular user homepage — note list
   let categories: any[] = []
   let tags: any[] = []
-  let result = { notes: [], total: 0, page: 1, pageSize: 6, totalPages: 0 }
+  let result: { notes: any[]; total: number; page: number; pageSize: number; totalPages: number } = { notes: [], total: 0, page: 1, pageSize: 6, totalPages: 0 }
   try {
     ;[categories, tags, result] = await Promise.all([
       getCategoriesWithCount(true),

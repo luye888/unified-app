@@ -5,7 +5,7 @@ import { BlogNotesTabs } from '@/components/BlogNotesTabs'
 
 export default async function BlogPage() {
   let posts: Awaited<ReturnType<typeof getBlogPosts>> = []
-  let notes: Awaited<ReturnType<typeof getNotesServer>> = []
+  let notes: Awaited<ReturnType<typeof getNotesServer>>['notes'] = []
 
   try {
     const [p, n] = await Promise.all([
@@ -13,7 +13,7 @@ export default async function BlogPage() {
       getNotesServer({ publicOnly: true }),
     ])
     posts = p
-    notes = n
+    notes = n.notes
   } catch {
     // Database may not be set up yet
   }

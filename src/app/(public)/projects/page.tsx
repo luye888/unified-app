@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 export default async function ProjectsPage() {
   let projects: Awaited<ReturnType<typeof getProjects>> = []
-  let notes: Awaited<ReturnType<typeof getNotes>> = []
+  let notes: Awaited<ReturnType<typeof getNotesServer>> = []
 
   try {
     const [p, n] = await Promise.all([

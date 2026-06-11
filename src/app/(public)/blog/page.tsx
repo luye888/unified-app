@@ -1,5 +1,5 @@
 import { getBlogPosts } from '@/lib/blog'
-import { getNotes } from '@/lib/notes'
+import { getNotesServer } from '@/lib/notes-server'
 import Link from 'next/link'
 import { BlogNotesTabs } from '@/components/BlogNotesTabs'
 
@@ -10,7 +10,7 @@ export default async function BlogPage() {
   try {
     const [p, n] = await Promise.all([
       getBlogPosts({ published: true }),
-      getNotes({ publicOnly: true }),
+      getNotesServer({ publicOnly: true }),
     ])
     posts = p
     notes = n

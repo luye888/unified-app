@@ -1,5 +1,5 @@
 import { getProjects } from '@/lib/projects'
-import { getNotes } from '@/lib/notes'
+import { getNotesServer } from '@/lib/notes-server'
 import Link from 'next/link'
 
 export default async function ProjectsPage() {
@@ -9,7 +9,7 @@ export default async function ProjectsPage() {
   try {
     const [p, n] = await Promise.all([
       getProjects(),
-      getNotes({ publicOnly: true }),
+      getNotesServer({ publicOnly: true }),
     ])
     projects = p
     notes = n

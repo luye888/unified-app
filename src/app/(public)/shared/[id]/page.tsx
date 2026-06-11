@@ -1,7 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { sanitizeHtml } from '@/lib/sanitize'
-import { marked } from 'marked'
 import { Note } from '@/types'
+import MarkdownContent from '@/components/MarkdownContent'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import AnalyticsTracker from '@/components/AnalyticsTracker'
@@ -75,10 +74,7 @@ export default async function SharedNotePage({
           )}
         </header>
 
-        <div
-          className="prose prose-lg dark:prose-invert max-w-none"
-          dangerouslySetInnerHTML={{ __html: sanitizeHtml(marked.parse(note.content) as string) }}
-        />
+        <MarkdownContent content={note.content} />
 
         <div className="mt-8">
           <Link

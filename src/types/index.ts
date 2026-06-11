@@ -57,6 +57,7 @@ export type Note = {
   author_id: string
   author?: Profile
   is_private: boolean
+  pinned: boolean
   created_at: string
   updated_at: string
 }

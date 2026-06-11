@@ -1,6 +1,6 @@
 import { getProjects } from '@/lib/projects'
 import { getBlogPosts } from '@/lib/blog'
-import { getNotes } from '@/lib/notes'
+import { getNotesServer } from '@/lib/notes-server'
 import { getSettings } from '@/lib/settings'
 import Link from 'next/link'
 import { TypewriterText } from '@/components/TypewriterText'
@@ -18,7 +18,7 @@ export default async function HomePage() {
       getSettings(),
       getProjects(),
       getBlogPosts({ published: true }),
-      getNotes({ publicOnly: true }),
+      getNotesServer({ publicOnly: true }),
     ])
     settings = results[0]
     projects = results[1]

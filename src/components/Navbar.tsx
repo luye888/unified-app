@@ -6,8 +6,6 @@ import { useAuth } from '@/hooks/use-auth'
 
 const navLinks = [
   { href: '/', label: '首页' },
-  { href: '/blog', label: '博客' },
-  { href: '/shared', label: '笔记' },
   { href: '/projects', label: '项目' },
 ]
 

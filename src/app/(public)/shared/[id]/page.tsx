@@ -1,10 +1,10 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Note } from '@/types'
-import MarkdownContent from '@/components/MarkdownContent'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import AnalyticsTracker from '@/components/AnalyticsTracker'
 import Link from 'next/link'
+import MarkdownContent from '@/components/MarkdownContent'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,6 +33,10 @@ export default async function SharedNotePage({
   if (!note || note.is_private) {
     notFound()
   }
+
+  // Parse markdown to HTML on server
+  const { marked } = await import('marked')
+  const html = marked.parse(note.content) as string
 
   return (
     <>
@@ -74,7 +78,7 @@ export default async function SharedNotePage({
           )}
         </header>
 
-        <MarkdownContent content={note.content} />
+        <MarkdownContent html={html} />
 
         <div className="mt-8">
           <Link

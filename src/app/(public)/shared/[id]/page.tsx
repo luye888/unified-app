@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { renderMarkdown } from '@/lib/markdown'
 import { Note } from '@/types'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
@@ -35,8 +36,7 @@ export default async function SharedNotePage({
   }
 
   // Parse markdown to HTML on server
-  const { marked } = await import('marked')
-  const html = marked.parse(note.content) as string
+  const html = renderMarkdown(note.content)
 
   return (
     <>

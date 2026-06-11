@@ -11,7 +11,7 @@ export default async function HomePage() {
   let settings = { site_title: '', bio: '', social_links: {} as Record<string, string> }
   let projects: Awaited<ReturnType<typeof getProjects>> = []
   let posts: Awaited<ReturnType<typeof getBlogPosts>> = []
-  let notes: Awaited<ReturnType<typeof getNotes>> = []
+  let notes: Awaited<ReturnType<typeof getNotesServer>> = []
 
   try {
     const results = await Promise.all([

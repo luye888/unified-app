@@ -52,7 +52,7 @@ export async function getTagsWithCount(publicOnly = true) {
   if (error) throw error
   const tagCounts: Record<string, number> = {}
   ;(data || []).forEach(note => {
-    note.tags?.forEach(tag => { tagCounts[tag] = (tagCounts[tag] || 0) + 1 })
+    note.tags?.forEach((tag: string) => { tagCounts[tag] = (tagCounts[tag] || 0) + 1 })
   })
   return Object.entries(tagCounts)
     .map(([name, count]) => ({ name, count }))

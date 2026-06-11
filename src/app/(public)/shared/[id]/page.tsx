@@ -1,4 +1,6 @@
-import { getNote } from '@/lib/notes'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { sanitizeHtml } from '@/lib/sanitize'
+import { marked } from 'marked'
 import { Note } from '@/types'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
@@ -16,7 +18,15 @@ export default async function SharedNotePage({
 
   let note: Note | null = null
   try {
-    note = await getNote(id)
+    const supabase = await createServerSupabaseClient()
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*, category:categories(*), author:profiles(*)')
+      .eq('id', id)
+      .single()
+
+    if (error) throw error
+    note = data as Note
   } catch {
     notFound()
   }
@@ -67,7 +77,7 @@ export default async function SharedNotePage({
 
         <div
           className="prose prose-lg dark:prose-invert max-w-none"
-          dangerouslySetInnerHTML={{ __html: note.content }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(marked.parse(note.content) as string) }}
         />
 
         <div className="mt-8">

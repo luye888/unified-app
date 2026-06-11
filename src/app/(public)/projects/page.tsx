@@ -1,10 +1,23 @@
 import { getProjects } from '@/lib/projects'
 import { getNotesServer } from '@/lib/notes-server'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 
 export default async function ProjectsPage() {
   let projects: Awaited<ReturnType<typeof getProjects>> = []
   let notes: Awaited<ReturnType<typeof getNotesServer>>['notes'] = []
+
+  // Check user role
+  let isAdmin = false
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles').select('role').eq('id', user.id).single()
+      isAdmin = profile?.role === 'admin'
+    }
+  } catch {}
 
   try {
     const [p, n] = await Promise.all([
@@ -13,9 +26,7 @@ export default async function ProjectsPage() {
     ])
     projects = p
     notes = n.notes
-  } catch {
-    // Database may not be set up yet
-  }
+  } catch {}
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -25,34 +36,38 @@ export default async function ProjectsPage() {
       <section className="mb-12">
         <h2 className="text-xl font-semibold mb-4">项目展示</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Built-in: Notes */}
-          <Link href="/notes" className="glass-card p-5 block hover:scale-[1.02] transition-transform">
-            <span className="text-xs font-medium text-[var(--leaf-primary)] mb-2 inline-block">内置</span>
-            <h3 className="font-semibold text-lg mb-2">笔记管理</h3>
-            <p className="text-sm text-muted-foreground mb-3">在线笔记编辑器，支持富文本、分类、标签、公开/私密切换</p>
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {['Tiptap', 'Supabase', '自动整理'].map((t) => (
-                <span key={t} className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
-                  {t}
-                </span>
-              ))}
-            </div>
-            <span className="text-sm text-primary">进入笔记 &rarr;</span>
-          </Link>
-          {/* Built-in: Dashboard */}
-          <a href="/dashboard.html" className="glass-card p-5 block hover:scale-[1.02] transition-transform">
-            <span className="text-xs font-medium text-[var(--leaf-primary)] mb-2 inline-block">内置</span>
-            <h3 className="font-semibold text-lg mb-2">数据面板</h3>
-            <p className="text-sm text-muted-foreground mb-3">可视化后端数据管理，直接操作笔记、博客、项目、分类</p>
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {['Supabase', 'CRUD', '可视化'].map((t) => (
-                <span key={t} className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
-                  {t}
-                </span>
-              ))}
-            </div>
-            <span className="text-sm text-primary">打开面板 &rarr;</span>
-          </a>
+          {/* Built-in: Notes - only for admin */}
+          {isAdmin && (
+            <>
+              <Link href="/notes" className="glass-card p-5 block hover:scale-[1.02] transition-transform">
+                <span className="text-xs font-medium text-[var(--leaf-primary)] mb-2 inline-block">内置</span>
+                <h3 className="font-semibold text-lg mb-2">笔记管理</h3>
+                <p className="text-sm text-muted-foreground mb-3">在线笔记编辑器，支持富文本、分类、标签、公开/私密切换</p>
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {['Tiptap', 'Supabase', '自动整理'].map((t) => (
+                    <span key={t} className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+                <span className="text-sm text-primary">进入笔记 &rarr;</span>
+              </Link>
+              {/* Built-in: Dashboard */}
+              <a href="/dashboard.html" className="glass-card p-5 block hover:scale-[1.02] transition-transform">
+                <span className="text-xs font-medium text-[var(--leaf-primary)] mb-2 inline-block">内置</span>
+                <h3 className="font-semibold text-lg mb-2">数据面板</h3>
+                <p className="text-sm text-muted-foreground mb-3">可视化后端数据管理，直接操作笔记、博客、项目、分类</p>
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {['Supabase', 'CRUD', '可视化'].map((t) => (
+                    <span key={t} className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+                <span className="text-sm text-primary">打开面板 &rarr;</span>
+              </a>
+            </>
+          )}
           {projects.map((project) => (
             <div key={project.id} className="glass-card p-5">
               <h3 className="font-semibold text-lg mb-2">{project.title}</h3>

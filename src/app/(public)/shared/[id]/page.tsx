@@ -1,5 +1,4 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { renderMarkdown } from '@/lib/markdown'
 import { Note } from '@/types'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
@@ -34,9 +33,6 @@ export default async function SharedNotePage({
   if (!note || note.is_private) {
     notFound()
   }
-
-  // Parse markdown to HTML on server
-  const html = renderMarkdown(note.content)
 
   return (
     <>
@@ -78,7 +74,7 @@ export default async function SharedNotePage({
           )}
         </header>
 
-        <MarkdownContent html={html} />
+        <MarkdownContent html={note.content} />
 
         <div className="mt-8">
           <Link

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function RegisterPage() {
@@ -10,7 +9,6 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -46,11 +44,9 @@ export default function RegisterPage() {
       })
 
       if (loginRes.ok) {
-        router.push('/')
-        router.refresh()
+        window.location.href = '/'
       } else {
-        // Registration succeeded but auto-login failed
-        router.push('/login')
+        window.location.href = '/login'
       }
     } catch {
       setError('请求失败，请重试')
@@ -66,7 +62,7 @@ export default function RegisterPage() {
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-card-foreground">注册</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              创建你的 NoteMaster 账户
+              创建你的绿叶账户
             </p>
           </div>
 

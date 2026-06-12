@@ -12,28 +12,36 @@ export function useAuth() {
     const supabase = createClient()
 
     async function fetchUser() {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
+      try {
+        const { data: { user: authUser }, error } = await supabase.auth.getUser()
+        console.log('[useAuth] getUser result:', authUser?.id, error?.message)
 
-      if (!authUser) {
-        setUser(null)
+        if (!authUser) {
+          setUser(null)
+          setLoading(false)
+          return
+        }
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authUser.id)
+          .single()
+
+        console.log('[useAuth] profile:', profile?.username, profile?.role)
+        setUser(profile as UserProfile | null)
+      } catch (e) {
+        console.error('[useAuth] error:', e)
+      } finally {
         setLoading(false)
-        return
       }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUser.id)
-        .single()
-
-      setUser(profile as UserProfile | null)
-      setLoading(false)
     }
 
     fetchUser()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event: string, session: { user: { id: string } } | null) => {
+        console.log('[useAuth] auth state changed:', _event, session?.user?.id)
         if (!session?.user) {
           setUser(null)
           return

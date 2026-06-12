@@ -13,22 +13,25 @@ export function useAuth() {
 
     async function fetchUser() {
       try {
+        console.log('[useAuth] calling getUser...')
         const { data: { user: authUser }, error } = await supabase.auth.getUser()
-        console.log('[useAuth] getUser result:', authUser?.id, error?.message)
+        console.log('[useAuth] getUser result:', authUser?.id || 'null', error?.message || 'no error')
 
         if (!authUser) {
+          console.log('[useAuth] no user found')
           setUser(null)
           setLoading(false)
           return
         }
 
-        const { data: profile } = await supabase
+        console.log('[useAuth] fetching profile for:', authUser.id)
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', authUser.id)
           .single()
 
-        console.log('[useAuth] profile:', profile?.username, profile?.role)
+        console.log('[useAuth] profile result:', profile?.username, profile?.role, profileError?.message)
         setUser(profile as UserProfile | null)
       } catch (e) {
         console.error('[useAuth] error:', e)

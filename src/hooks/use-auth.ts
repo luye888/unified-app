@@ -40,6 +40,12 @@ export function useAuth() {
       }
     }
 
+    // 设置超时，防止 getUser 挂起
+    const timeout = setTimeout(() => {
+      console.log('[useAuth] timeout - setting loading to false')
+      setLoading(false)
+    }, 5000)
+
     fetchUser()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -61,6 +67,7 @@ export function useAuth() {
     )
 
     return () => {
+      clearTimeout(timeout)
       subscription.unsubscribe()
     }
   }, [])

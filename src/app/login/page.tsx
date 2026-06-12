@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function LoginPage() {
@@ -9,7 +8,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -26,8 +24,7 @@ export default function LoginPage() {
       const data = await res.json()
 
       if (res.ok) {
-        router.push('/')
-        router.refresh()
+        window.location.href = '/'
       } else {
         setError(data.error || '登录失败')
       }
@@ -45,7 +42,7 @@ export default function LoginPage() {
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-card-foreground">登录</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              登录你的 NoteMaster 账户
+              登录你的绿叶账户
             </p>
           </div>
 

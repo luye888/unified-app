@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 
 const navLinks = [
@@ -11,7 +11,6 @@ const navLinks = [
 
 export function Navbar() {
   const pathname = usePathname()
-  const router = useRouter()
   const { user } = useAuth()
 
   function isActive(href: string) {
@@ -21,8 +20,7 @@ export function Navbar() {
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
-    router.push('/')
-    router.refresh()
+    window.location.href = '/'
   }
 
   return (

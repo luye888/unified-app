@@ -89,7 +89,7 @@ export default async function HomePage({
     )
   }
 
-  // Regular user homepage — note list
+  // Regular user homepage — Hero + note list
   let categories: any[] = []
   let tags: any[] = []
   let result: { notes: any[]; total: number; page: number; pageSize: number; totalPages: number } = { notes: [], total: 0, page: 1, pageSize: 6, totalPages: 0 }
@@ -102,12 +102,29 @@ export default async function HomePage({
   } catch {}
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <NoteListPage
-        notes={result.notes} categories={categories} tags={tags}
-        total={result.total} page={result.page} totalPages={result.totalPages}
-        activeTag={activeTag} activeCategory={activeCategory}
-      />
+    <div className="max-w-6xl mx-auto">
+      {/* Hero */}
+      <section className="text-center py-16 px-6 relative">
+        <div className="hero-glow" />
+        <h1 className="text-4xl md:text-5xl font-bold mb-4">
+          <TypewriterText text={settings.site_title || '绿叶的个人空间'} className="gradient-text" />
+        </h1>
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto bio-fade-in">
+          {settings.bio || '热爱技术与生活'}
+        </p>
+        <div className="flex justify-center gap-4 mt-6">
+          <span className="text-sm text-muted-foreground">📝 {result.total} 篇笔记</span>
+        </div>
+      </section>
+
+      {/* 笔记列表 */}
+      <div className="px-6 pb-12">
+        <NoteListPage
+          notes={result.notes} categories={categories} tags={tags}
+          total={result.total} page={result.page} totalPages={result.totalPages}
+          activeTag={activeTag} activeCategory={activeCategory}
+        />
+      </div>
     </div>
   )
 }

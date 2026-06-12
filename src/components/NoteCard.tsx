@@ -10,12 +10,12 @@ interface NoteCardProps {
 
 export function NoteCard({ note, pinned, activeTag }: NoteCardProps) {
   return (
-    <Link href={`/shared/${note.id}`}>
+    <Link href={`/shared/${note.id}`} className="group">
       <div className={`
         relative overflow-hidden cursor-pointer transition-all duration-300
         ${pinned
-          ? 'col-span-2 rounded-2xl p-7 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-[10px] border border-[var(--leaf-border)] hover:-translate-y-1.5 hover:scale-[1.01] hover:shadow-[0_20px_40px_rgba(45,138,94,0.15)] hover:border-[var(--leaf-primary)]'
-          : 'rounded-xl p-5 bg-white/85 backdrop-blur-[8px] border border-[var(--leaf-border)] hover:-translate-y-[5px] hover:shadow-[0_12px_30px_rgba(45,138,94,0.12)] hover:border-[#b8d8b8]'
+          ? 'col-span-2 rounded-2xl p-7 bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-[10px] border border-[var(--leaf-border)] group-hover:-translate-y-1.5 group-hover:scale-[1.01] group-hover:shadow-[0_20px_40px_rgba(45,138,94,0.15)] group-hover:border-[var(--leaf-primary)]'
+          : 'rounded-xl p-5 bg-white/85 backdrop-blur-[8px] border border-[var(--leaf-border)] group-hover:-translate-y-[5px] group-hover:shadow-[0_12px_30px_rgba(45,138,94,0.12)] group-hover:border-[#b8d8b8]'
         }
       `}>
         {pinned && (

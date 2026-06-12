@@ -78,10 +78,10 @@ export default async function SharedNotePage({
 
         <div className="mt-8">
           <Link
-            href="/shared"
+            href="/"
             className="text-sm text-[var(--leaf-text-muted)] hover:text-[var(--leaf-text)]"
           >
-            &larr; 返回公开笔记
+            &larr; 返回首页
           </Link>
         </div>
       </article>
